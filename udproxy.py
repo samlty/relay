@@ -64,7 +64,7 @@ class udp_threading (threading.Thread):
 
 
     def __sendDataBackSourceUseMainSock(self, data):
-        print "send data back to source " + self.__sourceAddr
+        print "send data back to source " + str(self.__sourceAddr)
         self.__mainSock.sendto(data, self.__sourceAddr)
 
     def sendDataToDest(self, data):
@@ -77,10 +77,10 @@ class udp_threading (threading.Thread):
 
 def getRemoteAddr(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    result = sock.bind(('0.0.0.0', port))
+    result = sock.bind(('172.31.5.146', port))
     print ("bind port %d succ and start recv" %port)
     data, address = sock.recvfrom(1024 * 10)
-    sock.sento("hello reply", address)
+    sock.sendto("hello reply", address)
     print(" recv data from "+ str(address) + " so close socket")
     sock.close()
     return address

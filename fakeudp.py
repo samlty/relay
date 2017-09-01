@@ -137,6 +137,28 @@ def ip2int(ip_addr):
         ip_addr = '127.0.0.1'
     return [int(x) for x in ip_addr.split('.')]
 
+def do_checksum(source_string):
+    """ Verify the packet interitity """
+    sum = 0
+    max_count = (len(source_string) / 2) * 2
+    count = 0
+    while count < max_count:
+        val = ord(source_string[count + 1]) * 256 + ord(source_string[count])
+        sum = sum + val
+        sum = sum & 0xffffffff
+        count = count + 2
+
+    if max_count < len(source_string):
+        sum = sum + ord(source_string[len(source_string) - 1])
+        sum = sum & 0xffffffff
+
+    sum = (sum >> 16) + (sum & 0xffff)
+    sum = sum + (sum >> 16)
+    answer = ~sum
+    answer = answer & 0xffff
+    answer = answer >> 8 | (answer << 8 & 0xff00)
+    return answer
+
 def udp_recv(addr, size):
     zero = 0
     protocol = 17
