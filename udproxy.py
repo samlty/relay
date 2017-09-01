@@ -16,7 +16,7 @@ class udp_work_server:
     def __init_socket(self, port):
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.__sock.bind(('0.0.0.0', port))
-        print ("bind 0.0.0.0:" + port + "successful")
+        print ("bind 0.0.0.0:" + str(port) + "successful")
 
     def __get_list_item(self, address):
         for addr, value in self.__sourceAddrSocketMap.items():
@@ -80,6 +80,8 @@ def getRemoteAddr(port):
     result = sock.bind(('0.0.0.0', port))
     print ("bind port %d succ and start recv" %port)
     data, address = sock.recvfrom(1024 * 10)
+    sock.sento("hello reply", address)
+    print(" recv data from "+ str(address) + " so close socket")
     sock.close()
     return address
 
