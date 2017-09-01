@@ -1,10 +1,8 @@
-FROM alpine
-MAINTAINER kev <noreply@easypi.pro>
+FROM ubuntu:14.04
+MAINTAINER kev <abc@rchat.cn>
 
-RUN set -xe \
-    && apk add --no-cache curl python3 \
-    && curl -sSL https://bootstrap.pypa.io/get-pip.py | python3
-ADD udproxy.py /app
+RUN apt-get -y install python3
+ADD udproxy.py /app／
 EXPOSE 1194
 EXPOSE 8000
-CMD ["python3 /app/udproxy.py"]
+ENTRYPOINT ["/usr/bin/python3 /app/udproxy.py"]
