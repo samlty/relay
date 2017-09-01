@@ -1,9 +1,10 @@
 FROM ubuntu:14.04
 MAINTAINER kev <abc@rchat.cn>
 
-RUN apt-get -y install python3 \
-&& mkdir -p /app
+RUN apt-get -y install python \
+&& mkdir -p /app \
+&& chmod 777 /app
 ADD udproxy.py /app/
 EXPOSE 1194
 EXPOSE 8000
-CMD ["python3 /app/udproxy.py"]
+CMD ["/usr/bin/python /app/udproxy.py"]
