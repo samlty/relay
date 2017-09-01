@@ -6,4 +6,4 @@ RUN apt-get -y install python3 \
 ADD udproxy.py /app/
 EXPOSE 1194
 EXPOSE 8000
-ENTRYPOINT ["/usr/bin/python3 /app/udproxy.py"]
+CMD ["python3 /app/udproxy.py"]
