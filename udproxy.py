@@ -77,7 +77,7 @@ class udp_threading (threading.Thread):
 
 def getRemoteAddr(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    result = sock.bind(('172.31.5.146', port))
+    result = sock.bind(('0.0.0.0', port))
     print ("bind port %d succ and start recv" %port)
     data, address = sock.recvfrom(1024 * 10)
     sock.sendto("hello reply", address)
