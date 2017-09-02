@@ -1,10 +1,9 @@
-FROM alpine
-MAINTAINER kev <noreply@easypi.pro>
+FROM python:2.7.13-wheezy
+MAINTAINER kev <abc@rchat.cn>
 
-RUN set -xe \
-    && apk add --no-cache curl python3 \
-    && curl -sSL https://bootstrap.pypa.io/get-pip.py | python3
+
+RUN mkdir -m 775 -p /app 
 ADD udproxy.py /app
 EXPOSE 1194
 EXPOSE 8000
-CMD ["python3 /app/udproxy.py"]
+CMD ["/usr/bin/python /app/udproxy.py"]

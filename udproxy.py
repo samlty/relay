@@ -168,6 +168,18 @@ class socket2Server (threading.Thread):
 
 
 
+def getRemoteAddr(port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    result = sock.bind(('0.0.0.0', port))
+    print ("bind port %d succ and start recv" %port)
+    data, address = sock.recvfrom(1024 * 10)
+    sock.sendto("hello reply", address)
+    print(" recv data from "+ str(address) + " so close socket")
+    sock.close()
+    return address
+
+
+
 def main():
     clientInstance = socket2Client(1194)
     serverInstance = socket2Server(8000)
