@@ -4,11 +4,9 @@ import threading
 import time
 import sys
 
-g_sockUsedList = [] # {} sock:sock, addr:addr count or sock:None
+g_sockAddrList = [] # {} sock:sock, addr:addr count or sock:None
 g_clientSock = None
 g_serverAddr = None
-
-
 
 def init_socket(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -22,16 +20,8 @@ def init_socket(port):
     return sock
 
 
-
-def clientSocketEntry(clientSock):
-
-    while True:
-        data, clientAddr = clientSock.recvfrom(1024 * 10)
-        handleMsgFromClient(data, clientAddr)
-
-
 def getSockFromClientAddr(clientAddr):
-    for item in g_sockUsedList:
+    for item in g_sockAddrList:
         if item.has_key("addr") and not cmp(item["addr"],clientAddr):
             print "successful"
             return item["sock"]
@@ -40,12 +30,12 @@ def getSockFromClientAddr(clientAddr):
 
 def handleMsgFromClient(data, clientAddr):
 
-    global g_sockUsedList
+    global g_sockAddrList
 
     sock2Server = getSockFromClientAddr(clientAddr)
     if sock2Server is None:
 
-        for item in g_sockUsedList:
+        for item in g_sockAddrList:
             if not item.has_key("addr"):
 
                 item["addr"] = clientAddr
@@ -84,20 +74,36 @@ def serverSocketEntry(serverSock, clientAddr):
             if clientAddr:
                 g_clientSock.sendto(data, clientAddr)
 
+def checkCount():
+    global g_sockAddrList
+
+    while True:
+        for item in g_sockAddrList:
+            if item.has_key("count") and item.has_key("addr"):
+                if item["count"] > 10:  # too old  , no traffic during 10*10s, clean it
+                    print "addr " + str(item["addr"]) + " is too old, clean it"
+                    del item["addr"]
+                    del item["count"]
+                else:
+                    item["count"] += 1
+
+        time.sleep(10)
 
 def main():
 
     global g_clientSock
-    global g_sockUsedList
+    global g_sockAddrList
     g_clientSock = init_socket(1194)
     descovery_sock = init_socket(8000)
     if g_clientSock is None or descovery_sock is None:
         print "bind 1194 or 8000 failed"
         sys.exit(1)
 
+    # start 8000 socket to recv package to get WAN addr of vpn server
     t = threading.Thread(target=serverSocketEntry, args=(descovery_sock, None))
     t.start()
 
+    # start 100 socket to use, per client use one
     for i in range(45600,45700):
         sock = init_socket(i)
         if sock is None:
@@ -105,20 +111,17 @@ def main():
             continue
         item={}
         item["sock"]=sock
-        g_sockUsedList.append(item)
+        g_sockAddrList.append(item)
 
+    # start a thread to check too old client
+    timeThead = threading.Thread(target=checkCount)
+    timeThead.start()
 
-
-
-
-    clientSocketEntry(g_clientSock)
-
-
-
-
+    # handle msg from clients
     while True:
-        time.sleep(10)
+        data, clientAddr = g_clientSock.recvfrom(1024 * 10)
+        handleMsgFromClient(data, clientAddr)
 
-
-main()
+if __name__ == "__main__":
+    main()
 
