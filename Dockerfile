@@ -6,4 +6,4 @@ RUN mkdir -m 775 -p /app
 ADD udproxy.py /app
 EXPOSE 1194
 EXPOSE 8000
-CMD ["/usr/bin/python /app/udproxy.py"]
+CMD ["/usr/bin/python“, ”/app/udproxy.py"]
