@@ -4,12 +4,14 @@ import threading
 import time
 import sys
 
-g_sockAddrList = [] # {} sock:sock, addr:addr count or sock:None
+g_sockAddrList = [] # {} sock:sock, addr:client addr count:int port:port of socket
 g_clientSock = None
 g_serverAddr = None
 
+
 def init_socket(port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
     try:
         sock.bind(('0.0.0.0', port))
     except Exception:
@@ -20,10 +22,17 @@ def init_socket(port):
     return sock
 
 
+def getLocalPortFromClientAddr(clientAddr):
+    for item in g_sockAddrList:
+        if item.has_key("addr") and not cmp(item["addr"], clientAddr):
+            # print "successful"
+            return item["port"]
+
+    return None
 def getSockFromClientAddr(clientAddr):
     for item in g_sockAddrList:
         if item.has_key("addr") and not cmp(item["addr"],clientAddr):
-            print "successful"
+            #print "successful"
             return item["sock"]
 
     return None
@@ -33,6 +42,7 @@ def handleMsgFromClient(data, clientAddr):
     global g_sockAddrList
 
     sock2Server = getSockFromClientAddr(clientAddr)
+
     if sock2Server is None:
 
         for item in g_sockAddrList:
@@ -43,8 +53,10 @@ def handleMsgFromClient(data, clientAddr):
                 print "new a thread for addr " + str(clientAddr)
 
                 sock2Server = item["sock"]
-                t = threading.Thread(target=serverSocketEntry, args=(sock2Server, clientAddr,))
+                t = threading.Thread(target=serverSocketEntry, args=(sock2Server, clientAddr, item["port"],))
                 t.start()
+
+
                 break
 
         if sock2Server is None:
@@ -53,26 +65,31 @@ def handleMsgFromClient(data, clientAddr):
 
 
     if g_serverAddr:
+        localport = getLocalPortFromClientAddr(clientAddr)
+        if localport:
+            print "recv data from " + str(clientAddr) + " send to " + str(g_serverAddr) + " use localport " + str(localport)
         sock2Server.sendto(data, g_serverAddr)
 
-def serverSocketEntry(serverSock, clientAddr):
+def serverSocketEntry(serverSock, clientAddr, localPort):
     global g_serverAddr
-    while True:
+    while getSockFromClientAddr(clientAddr): # if clientSocket Handle clean it, thread is over
         data, address = serverSock.recvfrom(1024 * 10)
 
         if len(data) == 5 and str(data) == "hello":  # real
             if g_serverAddr is None:
                 g_serverAddr = address
-            print "recv hello from " + str(address)
+            print "port " + str(localPort) + " recv hello from " + str(address)
 
 
         elif (len(data) == 4 and str(data) == "test"):
-            print "recv test from " + str(address)
-            self.__serverSock.sendto("test", address)
+            print  "port " + str(localPort) + "recv test from " + str(address)
+            serverSock.sendto("test", address)
 
         else:
             if clientAddr:
                 g_clientSock.sendto(data, clientAddr)
+    print ("thread with port " + str(localPort) + " exited")
+
 
 def checkCount():
     global g_sockAddrList
@@ -81,7 +98,7 @@ def checkCount():
         for item in g_sockAddrList:
             if item.has_key("count") and item.has_key("addr"):
                 if item["count"] > 10:  # too old  , no traffic during 10*10s, clean it
-                    print "addr " + str(item["addr"]) + " is too old, clean it"
+                    print "addr " + str(item["addr"]) + " and localport " + str(item("port")) + " is too old, clean it"
                     del item["addr"]
                     del item["count"]
                 else:
@@ -100,7 +117,7 @@ def main():
         sys.exit(1)
 
     # start 8000 socket to recv package to get WAN addr of vpn server
-    t = threading.Thread(target=serverSocketEntry, args=(descovery_sock, None))
+    t = threading.Thread(target=serverSocketEntry, args=(descovery_sock, None, 8000))
     t.start()
 
     # start 100 socket to use, per client use one
@@ -111,6 +128,7 @@ def main():
             continue
         item={}
         item["sock"]=sock
+        item["port"]=i
         g_sockAddrList.append(item)
 
     # start a thread to check too old client

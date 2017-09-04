@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
     data = "hello"
     while True:
-        
+
         pkt = IP(src=sys.argv[1], dst=sys.argv[2])/UDP(sport=1194, dport=8000)/data
         send(pkt,inter=10,count=10000)
 
