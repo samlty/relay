@@ -98,7 +98,7 @@ def serverSocketEntry(infoItem):
             if not infoItem.has_key("serverAddr"):
                 infoItem["serverAddr"] = address
                 print "port " + str(localPort) + " add address " + str(address) + " to infoItem[\"serverAddr\"]"
-            print "port " + str(localPort) + " recv hello from " + str(address)
+            #print "port " + str(localPort) + " recv hello from " + str(address)
 
 
         elif (len(data) == 4 and str(data) == "test"):
