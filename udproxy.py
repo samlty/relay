@@ -4,6 +4,8 @@ import threading
 import time
 import sys
 
+
+
 g_sockAddrList = [] # {} sock:sock, addr:client addr count:int port:port of socket
 g_clientSock = None
 g_serverAddr = None
@@ -72,7 +74,7 @@ def handleMsgFromClient(data, clientAddr):
 
 def serverSocketEntry(serverSock, clientAddr, localPort):
     global g_serverAddr
-    while getSockFromClientAddr(clientAddr): # if clientSocket Handle clean it, thread is over
+    while not clientAddr or getSockFromClientAddr(clientAddr): # if clientSocket Handle clean it, thread is over
         data, address = serverSock.recvfrom(1024 * 10)
 
         if len(data) == 5 and str(data) == "hello":  # real
@@ -87,6 +89,7 @@ def serverSocketEntry(serverSock, clientAddr, localPort):
 
         else:
             if clientAddr:
+                print "port " + str(localPort) + "recv data from " + str(address) + " send to " + str(clientAddr)
                 g_clientSock.sendto(data, clientAddr)
     print ("thread with port " + str(localPort) + " exited")
 
@@ -98,7 +101,7 @@ def checkCount():
         for item in g_sockAddrList:
             if item.has_key("count") and item.has_key("addr"):
                 if item["count"] > 10:  # too old  , no traffic during 10*10s, clean it
-                    print "addr " + str(item["addr"]) + " and localport " + str(item("port")) + " is too old, clean it"
+                    print "addr " + str(item["addr"]) + " and localport " + str(item["port"]) + " is too old, clean it"
                     del item["addr"]
                     del item["count"]
                 else:
