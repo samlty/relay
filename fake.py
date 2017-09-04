@@ -20,10 +20,6 @@ if __name__ == "__main__":
     t = threading.Thread(target=sendToPorts)
     t.start()
 
-    data = "hello"
     while True:
 	time.sleep(10)
         
-        #pkt = IP(src=sys.argv[1], dst=sys.argv[2])/UDP(sport=1194, dport=8000)/data
-        #send(pkt,inter=10,count=10000)
-
