@@ -20,6 +20,7 @@ def sendToPorts(ifname, hostname):
 
     localIp = getIpFromInterface(ifname)
     remoteIp = socket.gethostbyname(hostname)
+    print "local ip is " + localIp + " remoteip is " + remoteIp
 
     while True:
         for i in range(45600,45700):
