@@ -101,10 +101,10 @@ def serverSocketEntry(infoItem):
 
     while True: # if clientSocket Handle clean it, thread is over
         data, address = serverSock.recvfrom(1024 * 10)
-        logging.debug(" recv data from target " + str(address))
+        logging.debug("port " + str(localPort) + " recv data from target " + str(address))
 
         if len(data) == 5 and str(data) == "hello":  # real
-            logging.debug("recv an hello msg")
+            logging.debug("port " + str(localPort) + "recv an hello msg from " + str(address))
             if not infoItem.has_key("serverAddr"):
 
                 infoItem["serverAddr"] = address
