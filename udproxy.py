@@ -218,6 +218,9 @@ def main():
     logging.info("start checkout thread successful")
     timeThead = threading.Thread(target=checkCount)
     timeThead.start()
+    
+    while True:
+        time.sleep(10)
 
 
 
