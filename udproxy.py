@@ -5,11 +5,19 @@ import time
 import sys
 import logging
 
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%m-%d %H:%M:%S',
                 filename='myapp.log',
                 filemode='w')
+
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
+console.setFormatter(formatter)
+logging.getLogger('').addHandler(console)
+
+
 
 
 g_sockAddrList = [] # {} sock:sock, clientAddr:client addr count:int port:port of socket, serverAddr: vpn server addr
@@ -162,6 +170,7 @@ def checkCount():
 
 def clientSocketEntry(clientSock,addrKey):
     # handle msg from clients
+    logging.critical("in " + addrKey)
     while True:
         data, clientAddr = clientSock.recvfrom(1024 * 10)
         handleMsgFromClient(data, clientAddr, addrKey)
@@ -178,7 +187,7 @@ def main():
     if g_clientSock500 is None or g_clientSock4500 is None:
         logging.error( "bind 500 or 4500  failed")
         sys.exit(1)
-    logging.info("bind port " + str(i) + " && start thread succ")
+    logging.info("bind port 500 4500 && start thread succ")
 
     t_500 = threading.Thread(target=clientSocketEntry, args=(g_clientSock500, IKE_ADDR))
     t_500.start()
