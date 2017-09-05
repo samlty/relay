@@ -16,7 +16,7 @@ def getIpFromInterface(ifname):
 
 
 def sendToPorts(ifname, hostname):
-    data = "hello"
+    #data = "hello"
 
     localIp = getIpFromInterface(ifname)
     remoteIp = socket.gethostbyname(hostname)
@@ -24,7 +24,9 @@ def sendToPorts(ifname, hostname):
 
     while True:
         for i in range(45600,45700):
-            pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=1194, dport=i)/data
+            pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=500, dport=i)/"hello500"
+            send(pkt)
+            pkt = IP(src=localIp, dst=remoteIp) / UDP(sport=4500, dport=i) / "hello4500"
             send(pkt)
 
     
@@ -35,7 +37,7 @@ if __name__ == "__main__":
         print("use interfaceName destip/hostname ")
         sys.exit(1)
 
-    time.sleep(20)
+    
     t = threading.Thread(target=sendToPorts, args=(sys.argv[1],sys.argv[2],))
     t.start()
 
