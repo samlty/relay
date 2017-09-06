@@ -6,7 +6,7 @@ import sys
 import logging
 import ConfigParser
 
-logging.basicConfig(level=logging.INFO,
+logging.basicConfig(level=logging.DEBUG,
                 format='%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s',
                 datefmt='%m-%d %H:%M:%S',
                 filename='myapp.log',
@@ -129,6 +129,7 @@ def proxySocketEntry(infoItem):
     global g_serverSockList
 
     serverSockList = g_serverSockList
+    mapAddrserverSock= {} # map for server addr and g_serverSockList Item
     serverSockItem = None
 
     localPort = infoItem["port"]
@@ -141,10 +142,10 @@ def proxySocketEntry(infoItem):
 
         if str(data[0:5]) == "heLLo":  # real
 
-            logging.debug("port " + str(localPort) + "recv an hello msg from " + str(address))
-            serverSockItem = getServerSockFromData(serverSockList, data)
+            logging.debug("port " + str(localPort) + "recv an " + str(data) + " from " + str(address))
+            serverSockItem = getServerSockFromData(g_serverSockList, data)
             if serverSockItem is None:
-                logging.error(" recv an unkonwn hello msg")
+                logging.error( "port " + str(localPort) + " recv an unkonwn hello msg")
                 continue
 
             serverPort = serverSockItem["port"]
@@ -153,13 +154,13 @@ def proxySocketEntry(infoItem):
             if not infoItem.has_key("serverAddr" + str(serverPort)):
 
                 infoItem["serverAddr" + str(serverPort)] = address
-                logging.info( "port " + str(localPort) + " add address " + str(address) + " to " + str(address))
-                serverSockItem["addr"] = address
+                logging.info( "port " + str(localPort) + " add address to " + str(address))
+                mapAddrserverSock[address] = serverSockItem
             #print "port " + str(localPort) + " recv hello from " + str(address)
             elif cmp(infoItem["serverAddr" + str(serverPort)], address):
                 logging.info( "port " + str(localPort) + "renew address from " + str(infoItem["serverAddr" + str(serverPort)]) + " to " + str(address))
                 infoItem["serverAddr" + str(serverPort)] = address
-                serverSockItem["addr"] = address
+                mapAddrserverSock[address] = serverSockItem
 
 
         elif (len(data) == 4 and str(data) == "test"):
@@ -167,14 +168,15 @@ def proxySocketEntry(infoItem):
             serverSock.sendto("test", address)
 
         else:
-            serverSockItem = getServerSockFromAddress(serverSockList, address)
-            if serverSockItem is None:
-                logging.error(" recv an unkonwn  msg from " + str(address))
+
+
+            if not mapAddrserverSock.has_key(address):
+                logging.error( "port " + str(localPort) + " recv an unkonwn  msg from " + str(address))
                 continue
 
-            if infoItem.has_key("clientAddr") and serverSockItem.has_key("sock"):
+            if infoItem.has_key("clientAddr") and mapAddrserverSock[address].has_key("sock"):
                 logging.debug( "port " + str(localPort) + "recv data from " + str(address) + " send to " + str(infoItem["clientAddr"]))
-                serverSockItem["sock"].sendto(data, infoItem["clientAddr"])
+                mapAddrserverSock[address]["sock"].sendto(data, infoItem["clientAddr"])
 
 
 
