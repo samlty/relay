@@ -56,7 +56,7 @@ if __name__ == "__main__":
         print("use interfaceName destip/hostname ")
         sys.exit(1)
 
-    
+    getConfig("proxy.conf")
     t = threading.Thread(target=sendToPorts, args=(sys.argv[1],sys.argv[2],))
     t.start()
 
