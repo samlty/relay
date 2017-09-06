@@ -13,7 +13,7 @@ logging.basicConfig(level=logging.INFO,
                 filemode='w')
 
 console = logging.StreamHandler()
-console.setLevel(logging.INFO)
+console.setLevel(logging.DEBUG)
 formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] %(levelname)s %(message)s')
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
@@ -22,15 +22,9 @@ logging.getLogger('').addHandler(console)
 
 
 g_sockAddrList = [] # {} sock:sock, clientAddr:client addr count:int port:port of socket, serverAddr: vpn server addr
-g_clientSock500 = None
-g_clientSock4500 = None
 
 g_globalConfig = {}
 g_serverSockList = []
-
-IKE_ADDR = "serverAddr500"
-IPSEC_ADDR = "serverAddr4500"
-
 
 
 def init_socket(port):
@@ -38,8 +32,9 @@ def init_socket(port):
 
     try:
         sock.bind(('0.0.0.0', port))
-    except Exception:
+    except Exception as ex:
         logging.error ("bind 0.0.0.0:" + str(port) + "failed")
+        logging.error(str(ex))
         return None
 
     logging.info ("bind 0.0.0.0:" + str(port) + "successful")
@@ -208,6 +203,7 @@ def serverSocketEntry(clientSock,addrKey):
 
 def bindServerPortsAndStartThread():
     global g_serverSockList
+    portList = []
     if g_globalConfig.has_key("serverPorts"):
         portList = g_globalConfig["serverPorts"]
     else:
@@ -232,7 +228,7 @@ def bindServerPortsAndStartThread():
 def startProxyThreading():
     global g_globalConfig
 
-    for i in range(g_globalConfig["startPort"], g_globalConfig["endPort"]):
+    for i in range(g_globalConfig["startProxyPort"], g_globalConfig["endProxyPort"]):
         sock = init_socket(i)
         if sock is None:
             logging.error("bind port %d failed continue" % i)
@@ -268,22 +264,25 @@ def main():
         time.sleep(10)
 
 def getConfig(conf_file):
-    global g_globalConfig
+    global    g_globalConfig
 
     config = ConfigParser.RawConfigParser()
     config.read(conf_file)
 
     serverPorts = config.get("global", "serverPorts")
-    g_globalConfig["ports"] = serverPorts.strip().split(',')
+    serverPortList = serverPorts.strip().split(',')
+    g_globalConfig["serverPorts"]=[]
+    for port in serverPortList:
+        g_globalConfig["serverPorts"].append(int(port))
+
     g_globalConfig["startProxyPort"] = int(config.get("global", "startPort"))
     g_globalConfig["endProxyPort"] = int(config.get("global", "endPort"))
 
-    for port in g_globalConfig["ports"]:
-        port = int(port)
+
 
 
 
 if __name__ == "__main__":
-    getConfig()
+    getConfig("proxy.conf")
     main()
 

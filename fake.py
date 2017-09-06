@@ -5,6 +5,25 @@ import time
 import fcntl
 import struct
 import socket
+import ConfigParser
+
+g_globalConfig={}
+
+def getConfig(conf_file):
+    global    g_globalConfig
+
+    config = ConfigParser.RawConfigParser()
+    config.read(conf_file)
+
+    serverPorts = config.get("global", "serverPorts")
+    serverPortList = serverPorts.strip().split(',')
+    g_globalConfig["serverPorts"]=[]
+    for port in serverPortList:
+        g_globalConfig["serverPorts"].append(int(port))
+
+    g_globalConfig["startProxyPort"] = int(config.get("global", "startPort"))
+    g_globalConfig["endProxyPort"] = int(config.get("global", "endPort"))
+
 
 def getIpFromInterface(ifname):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -23,14 +42,14 @@ def sendToPorts(ifname, hostname):
     print "local ip is " + localIp + " remoteip is " + remoteIp
 
     while True:
-        for i in range(45600,45700):
-            pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=500, dport=i)/"hello500"
-            send(pkt)
-            pkt = IP(src=localIp, dst=remoteIp) / UDP(sport=4500, dport=i) / "hello4500"
-            send(pkt)
+        for i in range(g_globalConfig["startProxyPort"], g_globalConfig["endProxyPort"]):
+            for port in g_globalConfig["serverPorts"]:
+                pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=port, dport=i)/"hello"+str(port)
+                send(pkt)
+
 
     
-    time.sleep(10)
+    time.sleep(20)
 
 if __name__ == "__main__":
     if len(sys.argv)!=3:
