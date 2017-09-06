@@ -44,7 +44,7 @@ def sendToPorts(ifname, hostname):
     while True:
         for i in range(g_globalConfig["startProxyPort"], g_globalConfig["endProxyPort"]):
             for port in g_globalConfig["serverPorts"]:
-                pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=port, dport=i)/("hello"+str(port))
+                pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=port, dport=i)/("heLLo"+str(port))
                 send(pkt)
 
 
