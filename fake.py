@@ -37,11 +37,10 @@ def getIpFromInterface(ifname):
 def sendToPorts(ifname, hostname):
     #data = "hello"
 
-    localIp = getIpFromInterface(ifname)
-    remoteIp = socket.gethostbyname(hostname)
-    print "local ip is " + localIp + " remoteip is " + remoteIp
-
     while True:
+        localIp = getIpFromInterface(ifname)
+        remoteIp = socket.gethostbyname(hostname)
+        print "local ip is " + localIp + " remoteip is " + remoteIp
         for i in range(g_globalConfig["startProxyPort"], g_globalConfig["endProxyPort"]):
             for port in g_globalConfig["serverPorts"]:
                 pkt = IP(src=localIp, dst=remoteIp)/UDP(sport=port, dport=i)/("heLLo"+str(port))
