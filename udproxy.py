@@ -67,7 +67,7 @@ def getItemFromClientAddr(clientAddr):
     logging.info(" not found existed item use " + str(clientAddr))
     return None
 
-def handleMsgFromClient(data, clientAddr, addrKey ): # serverAddr500 or serverAddr4500
+def handleMsgFromClient(selfSock, data, clientAddr, addrKey ): # serverAddr500 or serverAddr4500
     logging.debug("recv data from client " + str(clientAddr))
     global g_sockAddrList
 
@@ -82,6 +82,7 @@ def handleMsgFromClient(data, clientAddr, addrKey ): # serverAddr500 or serverAd
 
                 item["clientAddr"] = clientAddr
                 item["count"] = 0
+                item["serverSock"]=selfSock
                 infoItem = item
 
                 break
@@ -133,11 +134,11 @@ def proxySocketEntry(infoItem):
     serverSockItem = None
 
     localPort = infoItem["port"]
-    serverSock = infoItem["sock"]
+    proxySock = infoItem["sock"]
 
 
     while True: # if clientSocket Handle clean it, thread is over
-        data, address = serverSock.recvfrom(1024 * 10)
+        data, address = proxySock.recvfrom(1024 * 10)
         logging.debug("port " + str(localPort) + " recv data from target " + str(address))
 
         if str(data[0:5]) == "heLLo":  # real
@@ -165,7 +166,7 @@ def proxySocketEntry(infoItem):
 
         elif (len(data) == 4 and str(data) == "test"):
             logging.info(  "port " + str(localPort) + "recv test from " + str(address))
-            serverSock.sendto("test", address)
+            proxySock.sendto("test", address)
 
         else:
 
@@ -174,9 +175,9 @@ def proxySocketEntry(infoItem):
                 logging.error( "port " + str(localPort) + " recv an unkonwn  msg from " + str(address))
                 continue
 
-            if infoItem.has_key("clientAddr") and mapAddrserverSock[address].has_key("sock"):
+            if infoItem.has_key("clientAddr") and infoItem.has_key("serverSock"):
                 logging.debug( "port " + str(localPort) + "recv data from " + str(address) + " send to " + str(infoItem["clientAddr"]))
-                mapAddrserverSock[address]["sock"].sendto(data, infoItem["clientAddr"])
+                infoItem["serverSock"].sendto(data, infoItem["clientAddr"])
 
 
 
@@ -195,12 +196,12 @@ def checkCount():
 
         time.sleep(10)
 
-def serverSocketEntry(clientSock,addrKey):
+def serverSocketEntry(serverSock,addrKey):
     # handle msg from clients
     logging.critical("in " + addrKey)
     while True:
-        data, clientAddr = clientSock.recvfrom(1024 * 10)
-        handleMsgFromClient(data, clientAddr, addrKey)
+        data, clientAddr = serverSock.recvfrom(1024 * 10)
+        handleMsgFromClient(serverSock, data, clientAddr, addrKey)
 
 
 def bindServerPortsAndStartThread():
