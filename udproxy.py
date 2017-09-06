@@ -116,7 +116,7 @@ def getServerSockFromAddress(serverSockList, address):
     for item in serverSockList:
         if item.has_key("addr") and not cmp(address, item["addr"]):
             return item
-
+    logging.error("not found address item " + str(address))
     return None
 
 def proxySocketEntry(infoItem):
