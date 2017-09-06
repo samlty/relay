@@ -37,16 +37,12 @@ def getIpFromInterface(ifname):
 def sendToPorts(ifname, hostname):
     #data = "hello"
 
-    while True:
-        try:
-            localIp = getIpFromInterface(ifname)
-            remoteIp = socket.gethostbyname(hostname)
-            print "local ip is " + localIp + " remoteip is " + remoteIp
+    localIp = getIpFromInterface(ifname)
+    remoteIp = socket.gethostbyname(hostname)
+    print "local ip is " + localIp + " remoteip is " + remoteIp
 
-        except Exception as ex:
-            print str(ex)
-            time.sleep(3)
-            continue
+    while True:
+
 
         for i in range(g_globalConfig["startProxyPort"], g_globalConfig["endProxyPort"]):
             for port in g_globalConfig["serverPorts"]:
