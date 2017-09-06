@@ -129,8 +129,7 @@ def proxySocketEntry(infoItem):
     #     serverAddr: vpn server addr added by self thread
     global g_serverSockList
 
-    serverSockList = g_serverSockList
-    mapAddrserverSock= {} # map for server addr and g_serverSockList Item
+
     serverSockItem = None
 
     localPort = infoItem["port"]
@@ -156,12 +155,12 @@ def proxySocketEntry(infoItem):
 
                 infoItem["serverAddr" + str(serverPort)] = address
                 logging.info( "port " + str(localPort) + " add address to " + str(address))
-                mapAddrserverSock[address] = serverSockItem
+
             #print "port " + str(localPort) + " recv hello from " + str(address)
             elif cmp(infoItem["serverAddr" + str(serverPort)], address):
                 logging.info( "port " + str(localPort) + "renew address from " + str(infoItem["serverAddr" + str(serverPort)]) + " to " + str(address))
                 infoItem["serverAddr" + str(serverPort)] = address
-                mapAddrserverSock[address] = serverSockItem
+
 
 
         elif (len(data) == 4 and str(data) == "test"):
@@ -169,11 +168,6 @@ def proxySocketEntry(infoItem):
             proxySock.sendto("test", address)
 
         else:
-
-
-            if not mapAddrserverSock.has_key(address):
-                logging.error( "port " + str(localPort) + " recv an unkonwn  msg from " + str(address))
-                continue
 
             if infoItem.has_key("clientAddr") and infoItem.has_key("serverSock"):
                 logging.debug( "port " + str(localPort) + "recv data from " + str(address) + " send to " + str(infoItem["clientAddr"]))
