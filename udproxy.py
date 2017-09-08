@@ -225,7 +225,7 @@ def startProxyThreading():
 
         item = {}
         item["proxySock"] = sock
-        item["ProxyPort"] = i
+        item["proxyPort"] = i
         g_proxyInfoList.append(item)
 
         t = threading.Thread(target=proxySocketEntry, args=(item,))
