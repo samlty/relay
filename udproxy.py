@@ -167,6 +167,8 @@ def proxySocketEntry(infoItem):
                 logging.debug( "targetAddr " + str(address)  + " -> " + str(localPort) \
                                + " : " + str(infoItem["originServerPort"]) + " -> " + str(infoItem["clientAddr"]))
                 infoItem["serverSock"].sendto(data, infoItem["clientAddr"])
+            else:
+                logging.error("proxySock " + str(localPort) + " has no clientAddr or serverSock")
 
 
 
