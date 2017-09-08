@@ -1,3 +1,4 @@
+#coding:utf-8
 import os
 import socket
 import threading
@@ -18,13 +19,22 @@ formatter = logging.Formatter('%(asctime)s %(filename)s[line:%(lineno)d] %(level
 console.setFormatter(formatter)
 logging.getLogger('').addHandler(console)
 
+# g_proxyInfoList是列表对象，其中的每个
+# 每个Item是一个Dict对象，Dict对象保存proxy转发所需要的：
+# proxySock:sock, 这是指proxySock线程所拥有的sock对象，与target通信，初始化赋值
+# ProxyPort:port of socket, proxySock的绑定Port，初始化赋值
 
+# clientAddr:记录原始客户端的地址，1，处理客户端报文时，根据clientAddr寻找proxySock和target addr， server线程赋值
+# 2，处理target报文时，用于填写转发目标地址
+# originalServerPort：原始服务端口，比如500，比如4500， server线程赋值
+# serverSock：与client通信用的socket对象 server线程赋值
+# count:用于统计是否长时间没有收发数据，如果长时间没有收发数据，就置为空闲状态 server线程赋值
 
+# serverAddr＋str(serverPort): 可能有一个或多个。 proxySock转发多个服务器端口，每个端口都有一个addr 比如对于500端口，有serverAddr500，
+# 对于4500端口有serverAddr4500 server线程转发数据时使用其中一个  proxy线程赋值，在收到hello报文后
 
-g_sockAddrList = [] # {} sock:sock, clientAddr:client addr count:int port:port of socket, serverAddr: vpn server addr
-
+g_proxyInfoList = []
 g_globalConfig = {}
-g_serverSockList = []
 
 
 def init_socket(port):
@@ -57,32 +67,36 @@ def init_socket(port):
 #     return None
 
 
+# 根据clientAddr和原始serverport查找记录
+# 同一个client可能用同一个原端口发送到多个目标端口
 
-def getItemFromClientAddr(clientAddr):
-    for item in g_sockAddrList:
-        if item.has_key("clientAddr") and not cmp(item["clientAddr"], clientAddr):
+def getItemFromClientAddr(clientAddr, originalServerPort):
+    for item in g_proxyInfoList:
+        if item.has_key("clientAddr") and not cmp(item["clientAddr"], clientAddr) and \
+                item.has_key("originalServerPort") and item["originalServerPort"]==originalServerPort:
             # print "successful"
-            logging.debug("found existed item use " + str(clientAddr))
+            logging.debug("found existed item use " + str(clientAddr) + " and original port " + str(originalServerPort))
             return item
-    logging.info(" not found existed item use " + str(clientAddr))
+    logging.info(" not found existed item use " + str(clientAddr) + " and original port " + str(originalServerPort))
     return None
 
-def handleMsgFromClient(selfSock, data, clientAddr, addrKey ): # serverAddr500 or serverAddr4500
-    logging.debug("recv data from client " + str(clientAddr))
-    global g_sockAddrList
+def handleMsgFromClient(selfSock, data, clientAddr, selfPort ): # serverAddr500 or serverAddr4500
+    logging.debug("selfPort " + str(selfPort) +"recv data from client " + str(clientAddr))
+    global g_proxyInfoList
 
-    infoItem = getItemFromClientAddr(clientAddr)
+    infoItem = getItemFromClientAddr(clientAddr, selfPort)
 
     if infoItem is None:
-        logging.info (" not found with clientAddr" + str(clientAddr))
+        logging.info (" not found with clientAddr" + str(clientAddr) + " and original port " + str(selfPort))
 
-        for item in g_sockAddrList:
+        for item in g_proxyInfoList:
             if not item.has_key("clientAddr"):
-                logging.info("get an unused item with port " + str(item["port"]))
+                logging.info("get an unused item with port " + str(item["proxyPort"]))
 
                 item["clientAddr"] = clientAddr
                 item["count"] = 0
                 item["serverSock"]=selfSock
+                item["originalServerPort"] = selfPort
                 infoItem = item
 
                 break
@@ -91,34 +105,19 @@ def handleMsgFromClient(selfSock, data, clientAddr, addrKey ): # serverAddr500 o
             logging.error("sock is full pls reboot app")
             return
 
-
+    infoItem["count"] = 0
+    addrKey = "serverAddr" + str(selfPort)
     if infoItem.has_key(addrKey):
+
         serverAddr = infoItem[addrKey]
-        localport = infoItem["port"]
-        sock = infoItem["sock"]
+        proxyPort = infoItem["proxyPort"]
+        proxySock = infoItem["proxySock"]
 
-        logging.debug( "recv data from " + str(clientAddr) + " send to " + str(serverAddr) + " use localport " + str(localport))
-        sock.sendto(data, serverAddr)
+        logging.debug( "clientAddr " + str(clientAddr) + " -> " + str(selfPort) + " : " + str(proxyPort) + " -> " + str(serverAddr) )
+        proxySock.sendto(data, serverAddr)
 
-def getServerSockFromData(serverSockList, data):
-    try:
-        port = int(str(data[5:]))
-        for item in serverSockList:
-            if item["port"]==port:
-                return item
 
-        return None
 
-    except Exception:
-        logging.error("trans data hello from server with error data")
-        return None
-
-def getServerSockFromAddress(serverSockList, address):
-    for item in serverSockList:
-        if item.has_key("addr") and not cmp(address, item["addr"]):
-            return item
-    logging.error("not found address item " + str(address))
-    return None
 
 def proxySocketEntry(infoItem):
     # info Item is an dict item
@@ -127,39 +126,34 @@ def proxySocketEntry(infoItem):
     # to be add :
     #     clientAddr: clientAddr  added by main thread
     #     serverAddr: vpn server addr added by self thread
-    global g_serverSockList
 
-
-    serverSockItem = None
-
-    localPort = infoItem["port"]
-    proxySock = infoItem["sock"]
-
+    localPort = infoItem["proxyPort"]
+    proxySock = infoItem["proxySock"]
 
     while True: # if clientSocket Handle clean it, thread is over
         data, address = proxySock.recvfrom(1024 * 10)
         logging.debug("port " + str(localPort) + " recv data from target " + str(address))
 
         if str(data[0:5]) == "heLLo":  # real
-
+            originServerPort = 0
             logging.debug("port " + str(localPort) + "recv an " + str(data) + " from " + str(address))
-            serverSockItem = getServerSockFromData(g_serverSockList, data)
-            if serverSockItem is None:
-                logging.error( "port " + str(localPort) + " recv an unkonwn hello msg")
-                continue
 
-            serverPort = serverSockItem["port"]
+            try:
 
+                originServerPort = int(data[5:])
+            except Exception as e:
+                logging.error(" recv invalid heLLo+ msg " + str(data))
+                return
 
-            if not infoItem.has_key("serverAddr" + str(serverPort)):
+            if not infoItem.has_key("serverAddr" + str(originServerPort)):
 
-                infoItem["serverAddr" + str(serverPort)] = address
-                logging.info( "port " + str(localPort) + " add address to " + str(address))
+                infoItem["serverAddr" + str(originServerPort)] = address
+                logging.info( "proxy port " + str(localPort) + " bind address to " + str(address))
 
             #print "port " + str(localPort) + " recv hello from " + str(address)
-            elif cmp(infoItem["serverAddr" + str(serverPort)], address):
-                logging.info( "port " + str(localPort) + "renew address from " + str(infoItem["serverAddr" + str(serverPort)]) + " to " + str(address))
-                infoItem["serverAddr" + str(serverPort)] = address
+            elif cmp(infoItem["serverAddr" + str(originServerPort)], address):
+                logging.info( "port " + str(localPort) + "rebind address from " + str(infoItem["serverAddr" + str(originServerPort)]) + " to " + str(address))
+                infoItem["serverAddr" + str(originServerPort)] = address
 
 
 
@@ -170,36 +164,38 @@ def proxySocketEntry(infoItem):
         else:
 
             if infoItem.has_key("clientAddr") and infoItem.has_key("serverSock"):
-                logging.debug( "port " + str(localPort) + "recv data from " + str(address) + " send to " + str(infoItem["clientAddr"]))
+                logging.debug( "targetAddr " + str(address)  + " -> " + str(localPort) \
+                               + " : " + str(infoItem["originServerPort"]) + " -> " + str(infoItem["clientAddr"]))
                 infoItem["serverSock"].sendto(data, infoItem["clientAddr"])
 
 
 
 def checkCount():
-    global g_sockAddrList
+    global g_proxyInfoList
 
     while True:
-        for item in g_sockAddrList:
+        for item in g_proxyInfoList:
             if item.has_key("count") and item.has_key("clientAddr"):
                 if item["count"] > 10:  # too old  , no traffic during 10*10s, clean it
                     logging.info( "addr " + str(item["clientAddr"]) + " and localport " + str(item["port"]) + " is too old, clean it")
                     del item["clientAddr"]
                     del item["count"]
+                    del item["originServerPort"]
+                    del item["serverSock"]
                 else:
                     item["count"] += 1
 
         time.sleep(10)
 
-def serverSocketEntry(serverSock,addrKey):
+def serverSocketEntry(serverSock,port):
     # handle msg from clients
-    logging.critical("in " + addrKey)
+
     while True:
         data, clientAddr = serverSock.recvfrom(1024 * 10)
-        handleMsgFromClient(serverSock, data, clientAddr, addrKey)
+        handleMsgFromClient(serverSock, data, clientAddr, port)
 
 
 def bindServerPortsAndStartThread():
-    global g_serverSockList
     portList = []
     if g_globalConfig.has_key("serverPorts"):
         portList = g_globalConfig["serverPorts"]
@@ -211,13 +207,9 @@ def bindServerPortsAndStartThread():
         if sock is None:
             logging.error("bind server port" + str(port) + " failed")
             sys.exit(1)
-        item = {}
-        item["sock"]=sock
-        item["port"]=port
-        t = threading.Thread(target=serverSocketEntry, args=(sock,"serverAddr"+str(port),))
+
+        t = threading.Thread(target=serverSocketEntry, args=(sock,port,))
         t.start()
-        item["thread"]=t
-        g_serverSockList.append(item)
 
     logging.info("binding serverPort and start threading successful")
 
@@ -232,20 +224,21 @@ def startProxyThreading():
             continue
 
         item = {}
-        item["sock"] = sock
-        item["port"] = i
-        g_sockAddrList.append(item)
+        item["proxySock"] = sock
+        item["ProxyPort"] = i
+        g_proxyInfoList.append(item)
+
         t = threading.Thread(target=proxySocketEntry, args=(item,))
         t.start()
-        item["thread"]=t
+
         logging.info("bind port " + str(i) + " && start thread succ")
 
 
 def main():
 
-    global g_sockAddrList
+    global g_proxyInfoList
     global g_globalConfig
-    global g_serverSockList
+
 
 
     bindServerPortsAndStartThread()
